@@ -89,10 +89,11 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset, stru
     ext[4-i] = fpath[l-i];
   }
 
-  if(!strcmp(ext, ".doc") || !strcmp(ext, ".txt") || !strcmp(ext, ".pdf")){
-    char cmd[1000];
-    
-    sprintf(cmd, "chmod 000 %s.ditandai", fpath);
+  if(strcmp(ext, ".doc") == 0 || strcmp(ext, ".txt") == 0 || strcmp(ext, ".pdf") == 0){
+    char cmd[1000], newfile[1000];
+    sprintf(newfile, "%s.ditandai", fpath);
+    rename(fpath, newfile);
+    sprintf(cmd, "chmod 000 %s", newfile);
     system(cmd);
     system("notify-send \"Warning!\" \"Terjadi Kesalahan! File berisi konten berbahaya.\n\" ");
     //system("zenity --error --text=\"Terjadi Kesalahan! File berisi konten berbahaya.\n\" --title=\"Warning!\"");

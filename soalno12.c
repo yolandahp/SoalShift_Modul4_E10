@@ -95,8 +95,13 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset, stru
     rename(fpath, newfile);
     sprintf(cmd, "chmod 000 %s", newfile);
     system(cmd);
+    system("mkdir /home/titut/Documents/rahasia");
     system("notify-send \"Warning!\" \"Terjadi Kesalahan! File berisi konten berbahaya.\n\" ");
-    //system("zenity --error --text=\"Terjadi Kesalahan! File berisi konten berbahaya.\n\" --title=\"Warning!\"");
+
+    char cmd2[1000];
+    sprintf(cmd2, "mv %s /home/titut/Documents/rahasia", newfile);
+    system(cmd2);
+
     return -errno;
   }
   else{

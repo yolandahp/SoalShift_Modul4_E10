@@ -48,6 +48,7 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_
     sprintf(fpath,"%s",path);
   }
   else sprintf(fpath, "%s%s",dirpath,path);
+  int res = 0;
 
   (void) offset;
   (void) fi;
@@ -60,7 +61,8 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_
     memset(&st, 0, sizeof(st));
     st.st_ino = de->d_ino;
     st.st_mode = de->d_type << 12;
-    if (filler(buf, de->d_name, &st, 0)) break;
+    res = (filler(buf, de->d_name, &st, 0));
+    if(res!=0) break;
   }
 
   closedir(dp);
@@ -75,7 +77,7 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset, stru
     sprintf(fpath,"%s", path);
   }
   else{
-    sprintf(fpath, "%s%s",dirpath,newFile);
+    sprintf(fpath, "%s%s",dirpath,path);
   }
 
   int res = 0;
@@ -83,12 +85,18 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset, stru
 
   char ext[4]; //extensionnya
   int i, l = strlen(fpath); //lalala.jpg
-  for(i = 4; i >= 1; i++){
+  for(i = 4; i >= 1; i--){
     ext[4-i] = fpath[l-i];
   }
 
-  if(!strcmp(temp, ".doc") || !strcmp(temp, ".txt") || !strcmp(temp, ".pdf")){
+  if(!strcmp(ext, ".doc") || !strcmp(ext, ".txt") || !strcmp(ext, ".pdf")){
+    char cmd[1000];
     
+    sprintf(cmd, "chmod 000 %s.ditandai", fpath);
+    system(cmd);
+    system("notify-send \"Warning!\" \"Terjadi Kesalahan! File berisi konten berbahaya.\n\" ");
+    //system("zenity --error --text=\"Terjadi Kesalahan! File berisi konten berbahaya.\n\" --title=\"Warning!\"");
+    return -errno;
   }
   else{
     (void) fi;

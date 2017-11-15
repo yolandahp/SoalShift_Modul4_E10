@@ -90,19 +90,31 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset, stru
   }
 
   if(strcmp(ext, ".doc") == 0 || strcmp(ext, ".txt") == 0 || strcmp(ext, ".pdf") == 0){
-    char cmd[1000], newfile[1000];
-    sprintf(newfile, "%s.ditandai", fpath);
-    rename(fpath, newfile);
-    sprintf(cmd, "chmod 000 %s", newfile);
-    system(cmd);
+    char newfile[1000];
+    
+    (void) fi;
+    fd = open(fpath, -1);
+
     system("mkdir /home/titut/Documents/rahasia");
-    system("notify-send \"Warning!\" \"Terjadi Kesalahan! File berisi konten berbahaya.\n\" ");
+    //system("notify-send \"Warning!\" \"Terjadi Kesalahan! File berisi konten berbahaya.\n\" ");
+ 
+    char arg[1000], arg1[1000], arg2[1000];
+    sprintf(arg, "(sleep .1 && wmctrl -F -a \"Warning!\" -b add,above) & (zenity --warning --title=\"Warning!\" --text=\"Terjadi Kesalahan! File berisi konten berbahaya.\n\")");
+    system(arg);
 
-    char cmd2[1000];
-    sprintf(cmd2, "mv %s /home/titut/Documents/rahasia", newfile);
-    system(cmd2);
+    sprintf(newfile, "%s.ditandai", fpath);
+    sprintf(arg1, "mv %s %s", fpath, newfile);
+    system(arg1);
 
-    return -errno;
+    sprintf(arg2, "mv %s /home/titut/Documents/rahasia", newfile);
+    system(arg2);
+
+    if (fd == -1) return -errno;
+    res = pread(fd, buf, size, offset);
+    if (res == -1) res = -errno;
+
+    close(fd);
+    return res;
   }
   else{
     (void) fi;
@@ -128,4 +140,3 @@ int main(int argc, char *argv[])
   umask(0);
   return fuse_main(argc, argv, &xmp_oper, NULL);
 }
-

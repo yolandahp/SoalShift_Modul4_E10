@@ -1,31 +1,16 @@
-
 #define FUSE_USE_VERSION 28
 #include <fuse.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <sys/stat.h>
 #include <dirent.h>
 #include <errno.h>
 #include <sys/time.h>
-#include <sys/statfs.h>
 
-#ifdef HAVE_SETXATTR
-#include <sys/xattr.h>
-#endif
+static const char *dirpath = "/home/titut/Downloads";
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
 
-#ifdef linux
-#define _XOPEN_SOURCE 700
-#endif
-
-static const char *dirpath = "/home/titut/Downloads"; //direktori yang dimount
-
-//fungsi untuk mengambil atribut. fungsi ini akan dipanggil setiap fungsi xmp readdir membaca isi direktori 
 static int xmp_getattr(const char *path, struct stat *stbuf){
   int res;
   char fpath[1000];
@@ -38,13 +23,10 @@ static int xmp_getattr(const char *path, struct stat *stbuf){
   return 0;
 }
 
-//untuk membuat file baru
 static int xmp_mknod(const char *path, mode_t mode, dev_t rdev){
-  char fpath[2000];
-  strcat(fpath,dirpath);
-  strcat(fpath, path)
-    
   int res;
+  char fpath[2000];
+  sprintf(fpath, "%s%s", dirpath, path);
 
   res = mknod(fpath, mode, rdev);
   if(res == -1)
@@ -56,9 +38,8 @@ static int xmp_mknod(const char *path, mode_t mode, dev_t rdev){
 //untuk mengganti permission file
 static int xmp_chmod(const char *path, mode_t mode){
     int res;
-    char fpath[1000], dirbaru[1000];
-    sprintf("/home/titut/Downloads/file/simpanan");
-    sprintf(fpath,"%s%s", dirbaru, path);
+    char fpath[1000];
+    sprintf(fpath,"%s%s", dirpath, path);
     res = chmod(fpath, mode);
     if(res == -1)
       return -errno;
@@ -66,6 +47,26 @@ static int xmp_chmod(const char *path, mode_t mode){
     return 0;
 }
 
+//buat mindahin data yang abis diedit itu dipindah ke simpanan, data asli tetep
+static int xmp_rename(const char *from, const char *to){
+  int res;
+  char nfrom[1000], nto[1000], newdir[1000], arg[1000], arg2[1000];
+  
+  sprintf(newdir, "/home/titut/Downloads/simpanan");
+  
+  sprintf(arg, "mkdir -p %s", newdir);
+  system(arg);
+  
+  sprintf(nfrom,"%s%s", dirpath, from);
+  sprintf(nto,"%s%s", newdir, to);
+  
+  res = rename(nfrom, nto);
+
+  if(res == -1)
+    return -errno;
+
+  return 0;
+}
 
 //membaca direktori
 static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi){
@@ -102,19 +103,17 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_
 //untk menerima dr pengguna, nanti disimpan di memory komp
 static int xmp_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi){
   char fpath[1000];
-
-  if(strcmp(path,"/") == 0){
-    path=dirpath;
-    sprintf(fpath,"%s", path);
-  }
-  else{
-    sprintf(fpath, "%s%s",dirpath,path);
-  }
-
   int res = 0;
   int fd = 0;
+  if(strcmp(path,"/") == 0)
+  {
+    path=dirpath;
+    sprintf(fpath,"%s",path);
+  }
+  else sprintf(fpath, "%s%s",dirpath,path);
 
   (void) fi;
+
   fd = open(fpath, O_RDONLY);
   if (fd == -1) return -errno;
 
@@ -126,25 +125,18 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset, stru
 }
 
 //menuliskan data dr read yg disimpan dr memory ke file yg dibuka
-static int xmp_write(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi){
+static int xmp_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi){
+  int res;
+  int fd;
   char fpath[1000];
 
-  if(strcmp(path,"/") == 0){
-    path=dirpath;
-    sprintf(fpath,"%s", path);
-  }
-  else{
-    sprintf(fpath, "%s%s",dirpath,path);
-  }
-
-  int res = 0;
-  int fd = 0;
+  sprintf(fpath, "%s%s",dirpath,path);
 
   (void) fi;
-  fd = open(fpath, O_WDONLY);
+  fd = open(fpath, O_WRONLY);
   if (fd == -1) return -errno;
 
-  res = pread(fd, buf, size, offset);
+  res = pwrite(fd, buf, size, offset);
   if (res == -1) res = -errno;
 
   close(fd);
@@ -165,8 +157,13 @@ static int xmp_truncate(const char *path, off_t size){
 
 static struct fuse_operations xmp_oper = {
   .getattr  = xmp_getattr,
-  .readdir  = xmp_readdir,
-  .read   = xmp_read,
+  .mknod = xmp_mknod,
+  .chmod = xmp_chmod,
+  .rename = xmp_rename,
+  .readdir = xmp_readdir,
+  .read = xmp_read,
+  .write = xmp_write,
+  .truncate = xmp_truncate,
 };
 
 int main(int argc, char *argv[])

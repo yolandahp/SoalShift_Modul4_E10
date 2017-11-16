@@ -38,6 +38,34 @@ static int xmp_getattr(const char *path, struct stat *stbuf){
   return 0;
 }
 
+//untuk membuat file baru
+static int xmp_mknod(const char *path, mode_t mode, dev_t rdev){
+  char fpath[2000];
+  strcat(fpath,dirpath);
+  strcat(fpath, path)
+    
+  int res;
+
+  res = mknod(fpath, mode, rdev);
+  if(res == -1)
+    return -errno;
+
+  return 0;
+}
+
+//untuk mengganti permission file
+static int xmp_chmod(const char *path, mode_t mode){
+    int res;
+    char fpath[1000], dirbaru[1000];
+    sprintf("/home/titut/Downloads/file/simpanan");
+    sprintf(fpath,"%s%s", dirbaru, path);
+    res = chmod(fpath, mode);
+    if(res == -1)
+      return -errno;
+
+    return 0;
+}
+
 
 //membaca direktori
 static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi){
@@ -134,8 +162,6 @@ static int xmp_truncate(const char *path, off_t size){
 
   return 0;
 }
-
-
 
 static struct fuse_operations xmp_oper = {
   .getattr  = xmp_getattr,

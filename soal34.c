@@ -38,6 +38,7 @@ static int xmp_getattr(const char *path, struct stat *stbuf){
   return 0;
 }
 
+
 //membaca direktori
 static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi){
   DIR *dp;
@@ -70,6 +71,7 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_
   return 0;
 }
 
+//untk menerima dr pengguna, nanti disimpan di memory komp
 static int xmp_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi){
   char fpath[1000];
 
@@ -94,6 +96,46 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset, stru
   close(fd);
   return res;
 }
+
+//menuliskan data dr read yg disimpan dr memory ke file yg dibuka
+static int xmp_write(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi){
+  char fpath[1000];
+
+  if(strcmp(path,"/") == 0){
+    path=dirpath;
+    sprintf(fpath,"%s", path);
+  }
+  else{
+    sprintf(fpath, "%s%s",dirpath,path);
+  }
+
+  int res = 0;
+  int fd = 0;
+
+  (void) fi;
+  fd = open(fpath, O_WDONLY);
+  if (fd == -1) return -errno;
+
+  res = pread(fd, buf, size, offset);
+  if (res == -1) res = -errno;
+
+  close(fd);
+  return res;
+}
+
+//mengganti alokasi memori tiap file
+static int xmp_truncate(const char *path, off_t size){
+  int res;
+  char fpath[1000];
+  sprintf(fpath,"%s%s", dirpath, path);
+  res = truncate(fpath, size);
+  if(res == -1)
+    return -errno;
+
+  return 0;
+}
+
+
 
 static struct fuse_operations xmp_oper = {
   .getattr  = xmp_getattr,
